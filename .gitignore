@@ -1,0 +1,10 @@
+target/
+.env
+.scannerwork/
+original_src/
+*.mp4
+.agents/
+.atlas/
+.idea/
+.vscode/
+.sonar/

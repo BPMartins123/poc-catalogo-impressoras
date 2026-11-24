@@ -1,0 +1,38 @@
+name: Quality Gate
+
+on:
+  pull_request:          # roda em todo PR, antes do merge
+    branches: [main]
+  push:                  # roda também quando algo entra na main
+    branches: [main]
+  workflow_dispatch:     # permite rodar manualmente pela aba Actions
+
+jobs:
+  quality-gate:
+    name: quality-gate
+    # Roda no runner instalado na sua máquina (onde está o SonarQube local)
+    runs-on: [self-hosted, windows]
+
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Conferir se o SonarQube está no ar
+        shell: powershell
+        run: |
+          try {
+            $status = (Invoke-RestMethod -Uri "http://localhost:9000/api/system/status" -TimeoutSec 5).status
+          } catch {
+            $status = "FORA DO AR"
+          }
+          if ($status -ne "UP") {
+            Write-Host "::error::SonarQube não está pronto (status: $status). Suba o SonarQube com docker compose up -d na pasta da POC Python."
+            exit 1
+          }
+          Write-Host "SonarQube no ar."
+
+      - name: Testes, cobertura e Quality Gate
+        shell: powershell
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: docker compose run --rm analise

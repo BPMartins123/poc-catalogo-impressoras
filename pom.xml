@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>4.1.0</version>
+    <relativePath/>
+  </parent>
+
+  <groupId>br.com.virtus.poc</groupId>
+  <artifactId>catalogo-impressoras</artifactId>
+  <version>1.0.0</version>
+  <name>Catalogo de Acessorios de Impressoras</name>
+  <description>POC do Quality Gate no SonarQube com uma API Spring Boot</description>
+
+  <properties>
+    <java.version>25</java.version>
+
+    <!-- SonarQube: projeto e servidor (SonarQube local, acessado de dentro do Docker) -->
+    <sonar.projectKey>POC-Catalogo-Impressoras</sonar.projectKey>
+    <sonar.projectName>POC Catalogo Impressoras</sonar.projectName>
+    <sonar.host.url>http://host.docker.internal:9000</sonar.host.url>
+    <!-- Espera o resultado do Quality Gate e falha o build se ele reprovar -->
+    <sonar.qualitygate.wait>true</sonar.qualitygate.wait>
+    <sonar.qualitygate.timeout>300</sonar.qualitygate.timeout>
+    <!-- Relatório de cobertura gerado pelo JaCoCo -->
+    <sonar.coverage.jacoco.xmlReportPaths>${project.build.directory}/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
+    <!-- A classe que só inicia a aplicação não entra na conta da cobertura -->
+    <sonar.coverage.exclusions>**/CatalogoApplication.java</sonar.coverage.exclusions>
+    <!-- A POC não precisa ser um repositório git -->
+    <sonar.scm.disabled>true</sonar.scm.disabled>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-webmvc</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-webmvc-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
+
+      <!-- Cobertura de testes: liga o agente antes dos testes e gera o XML no verify -->
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <version>0.8.15</version>
+        <executions>
+          <execution>
+            <id>prepare-agent</id>
+            <goals><goal>prepare-agent</goal></goals>
+          </execution>
+          <execution>
+            <id>report</id>
+            <phase>verify</phase>
+            <goals><goal>report</goal></goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- Scanner do SonarQube para Maven (versão fixada, como a Sonar recomenda) -->
+      <plugin>
+        <groupId>org.sonarsource.scanner.maven</groupId>
+        <artifactId>sonar-maven-plugin</artifactId>
+        <version>5.8.0.7211</version>
+      </plugin>
+    </plugins>
+  </build>
+</project>

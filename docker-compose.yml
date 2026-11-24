@@ -1,0 +1,32 @@
+name: poc-catalogo-impressoras
+
+# Usa o SonarQube que já está rodando (POC anterior) em http://localhost:9000.
+# Aqui ficam só os containers do Maven: um para a análise e outro para subir a API.
+
+services:
+  # Testes + cobertura (JaCoCo) + análise no SonarQube + espera do Quality Gate
+  analise:
+    image: maven:3.9-eclipse-temurin-25
+    profiles: ["ci"]
+    working_dir: /app
+    volumes:
+      - ./:/app
+      - maven-repo:/root/.m2
+    environment:
+      SONAR_TOKEN: ${SONAR_TOKEN:-}
+    command: sh -c 'mvn -B clean verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.token=$$SONAR_TOKEN'
+
+  # Sobe a API do catálogo em http://localhost:8080/api/acessorios
+  api:
+    image: maven:3.9-eclipse-temurin-25
+    working_dir: /app
+    volumes:
+      - ./:/app
+      - maven-repo:/root/.m2
+    ports:
+      - "8080:8080"
+    command: mvn -B spring-boot:run
+
+volumes:
+  # Guarda as dependências baixadas, para não baixar tudo de novo a cada execução
+  maven-repo:
