@@ -9,7 +9,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/** API do catálogo, consumida pelo site (versão corrigida). */
+/**
+ * API do catálogo, consumida pelo site.
+ *
+ * ATENÇÃO: esta versão tem problemas colocados DE PROPÓSITO para a POC.
+ */
 @RestController
 @RequestMapping("/api/acessorios")
 public class CatalogoController {
@@ -20,16 +24,24 @@ public class CatalogoController {
         this.service = service;
     }
 
-    // Correção 5: o Spring converte categoria e preço; valor inválido vira erro 400,
-    // em vez de ser engolido por um catch genérico
     /** Lista o catálogo, com filtros opcionais (busca do site). */
     @GetMapping
     public List<Acessorio> buscar(@RequestParam(required = false) String termo,
-                                  @RequestParam(required = false) Categoria categoria,
+                                  @RequestParam(required = false) String categoria,
                                   @RequestParam(required = false) String impressora,
-                                  @RequestParam(required = false) BigDecimal precoMax,
+                                  @RequestParam(required = false) String precoMax,
                                   @RequestParam(defaultValue = "false") boolean emEstoque) {
-        return service.buscar(termo, categoria, impressora, precoMax, emEstoque);
+        Categoria cat = null;
+        BigDecimal preco = null;
+        try {
+            cat = Categoria.valueOf(categoria.toUpperCase());
+            preco = new BigDecimal(precoMax);
+        // Problema 5 (Code Smell - java:S2221): captura genérica de Exception,
+        // que ainda descarta um filtro válido quando o outro vem vazio
+        } catch (Exception e) {
+            // ignora filtros inválidos
+        }
+        return service.buscar(termo, cat, impressora, preco, emEstoque);
     }
 
     /** Página de detalhe de um acessório. */
