@@ -19,6 +19,12 @@
 
   <properties>
     <java.version>25</java.version>
+        <!-- Catraca de cobertura: meta mínima de linhas cobertas (0.80 = 80%).
+         Só sobe, nunca desce. Atualizada pela pipeline quando a cobertura melhora. -->
+    <cobertura.minima>0.80</cobertura.minima>
+    <!-- Tolerância da catraca: a nova meta fica esta folga abaixo da cobertura real
+         (0.02 = 2 pontos percentuais), para não travar o build por uma única linha -->
+    <cobertura.tolerancia>0.02</cobertura.tolerancia>
 
     <!-- SonarQube: projeto e servidor (SonarQube local, acessado de dentro do Docker) -->
     <sonar.projectKey>POC-Catalogo-Impressoras</sonar.projectKey>
@@ -60,6 +66,12 @@
         <groupId>org.jacoco</groupId>
         <artifactId>jacoco-maven-plugin</artifactId>
         <version>0.8.15</version>
+                <configuration>
+          <excludes>
+            <!-- Só inicia a aplicação; mesma exclusão usada no SonarQube -->
+            <exclude>br/com/virtus/catalogo/CatalogoApplication.class</exclude>
+          </excludes>
+        </configuration>
         <executions>
           <execution>
             <id>prepare-agent</id>
@@ -69,6 +81,25 @@
             <id>report</id>
             <phase>verify</phase>
             <goals><goal>report</goal></goals>
+          </execution>
+          <execution>
+            <id>check</id>
+            <phase>verify</phase>
+            <goals><goal>check</goal></goals>
+            <configuration>
+              <rules>
+                <rule>
+                  <element>BUNDLE</element>
+                  <limits>
+                    <limit>
+                      <counter>LINE</counter>
+                      <value>COVEREDRATIO</value>
+                      <minimum>${cobertura.minima}</minimum>
+                    </limit>
+                  </limits>
+                </rule>
+              </rules>
+            </configuration>
           </execution>
         </executions>
       </plugin>
