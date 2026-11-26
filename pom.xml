@@ -21,7 +21,7 @@
     <java.version>25</java.version>
         <!-- Catraca de cobertura: meta mínima de linhas cobertas (0.80 = 80%).
          Só sobe, nunca desce. Atualizada pela pipeline quando a cobertura melhora. -->
-    <cobertura.minima>0.80</cobertura.minima>
+    <cobertura.minima>0.98</cobertura.minima>
     <!-- Tolerância da catraca: a nova meta fica esta folga abaixo da cobertura real
          (0.02 = 2 pontos percentuais), para não travar o build por uma única linha -->
     <cobertura.tolerancia>0.02</cobertura.tolerancia>
