@@ -12,6 +12,9 @@ jobs:
     name: quality-gate
     # Roda no runner instalado na sua máquina (onde está o SonarQube local)
     runs-on: [self-hosted, windows]
+    # Permite que a catraca envie uma branch com a nova meta
+    permissions:
+      contents: write #para o projeto novo
 
     steps:
       - name: Baixar o código
@@ -36,3 +39,51 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: docker compose run --rm analise
+
+      - name: Catraca de cobertura #para o projeto novo
+        # So roda quando algo entra na main (depois do merge), nunca em PR
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        shell: powershell
+        run: |
+          $inv = [Globalization.CultureInfo]::InvariantCulture
+
+          # 1. Cobertura atual de linhas, lida do relatorio do JaCoCo
+          $linhas   = Import-Csv target/site/jacoco/jacoco.csv
+          $cobertas = ($linhas | Measure-Object -Property LINE_COVERED -Sum).Sum
+          $perdidas = ($linhas | Measure-Object -Property LINE_MISSED -Sum).Sum
+          $atual    = [math]::Floor(100 * $cobertas / ($cobertas + $perdidas)) / 100
+
+          # 2. Meta e tolerancia atuais, lidas do pom.xml
+          $pom  = [IO.File]::ReadAllText("$PWD/pom.xml")
+          $meta = [double]::Parse([regex]::Match($pom, '<cobertura.minima>([0-9.]+)</cobertura.minima>').Groups[1].Value, $inv)
+          $tol  = [double]::Parse([regex]::Match($pom, '<cobertura.tolerancia>([0-9.]+)</cobertura.tolerancia>').Groups[1].Value, $inv)
+
+          # 3. Nova meta = cobertura atual menos a tolerancia (sem teto: sobe sempre que a cobertura subir)
+          $nova = [math]::Round($atual - $tol, 2)
+          $pct  = { param($v) ($v * 100).ToString("0", $inv) + "%" }
+          $utf8 = New-Object Text.UTF8Encoding $false
+          $texto = "### Catraca de cobertura`n`n| Cobertura atual | Tolerancia | Meta atual |`n|---|---|---|`n| $(& $pct $atual) | $(& $pct $tol) | $(& $pct $meta) |`n`n"
+
+          if ($nova -le $meta) {
+            Write-Host "Meta mantida em $(& $pct $meta)."
+            [IO.File]::AppendAllText($env:GITHUB_STEP_SUMMARY, $texto + "Meta mantida em **$(& $pct $meta)**.`n", $utf8)
+            exit 0
+          }
+
+          # 4. Atualiza a meta no pom.xml numa branch nova e envia para o GitHub
+          $novaTxt = $nova.ToString("0.00", $inv)
+          $pom = $pom -replace '<cobertura.minima>[0-9.]+</cobertura.minima>', "<cobertura.minima>$novaTxt</cobertura.minima>"
+          [IO.File]::WriteAllText("$PWD/pom.xml", $pom, $utf8)
+
+          $branch = "catraca/cobertura-" + ($nova * 100).ToString("0", $inv)
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B $branch
+          git add pom.xml
+          git commit -m "Catraca: sobe a cobertura minima para $novaTxt"
+          git push --force origin $branch
+
+          # 5. Link pronto para abrir o PR da nova meta
+          $link = "https://github.com/${{ github.repository }}/compare/main...${branch}?expand=1"
+          Write-Host "Nova meta proposta: $(& $pct $nova). Abra o PR: $link"
+          [IO.File]::AppendAllText($env:GITHUB_STEP_SUMMARY, $texto + "A cobertura subiu! Nova meta proposta: **$(& $pct $nova)**.`n`n[Abrir o pull request da nova meta]($link)`n", $utf8)
